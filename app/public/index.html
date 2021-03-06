@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico">
+    <title><%= htmlWebpackPlugin.options.title %></title>
+    <style>
+
+#rete {
+  height: 100%;
+}
+
+.node-editor {
+  min-width: 100vw;
+  min-height: 100vh;
+  display: inline-block;
+  background-size: 20px 20px;
+  background-image: linear-gradient(to right, #363636 1px, transparent 1px), linear-gradient(to bottom, #363636 1px, transparent 1px);
+  background-color: #272727;
+  background-repeat: repeat;
+  overflow: hidden;
+}
+.node-editor * {
+  box-sizing: border-box;
+}
+
+
+.node-editor .node {
+  background-color: rgba(35, 35, 35, 0.7) !important;
+  box-shadow: 1px solid black;
+  border: 1px solid black;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-block;
+  height: auto;
+  padding-bottom: 6px;
+  box-sizing: content-box;
+  box-shadow: 4px 5px 9px rgba(0, 0, 0, 0.5);
+  min-width: 160px;
+}
+.node-editor .node:hover {
+  background: rgba(35, 35, 35, 0.7);
+}
+.node-editor .node.selected {
+  background: rgba(22, 22, 22, 0.7);
+  border: 1px solid #ffd252;
+}
+.node-editor .node .title {
+  border-top: 1px solid #ccc;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  font-family: sans-serif;
+  font-size: 18px;
+  border-radius: 10px 10px 0 0;
+  padding: 8px;
+  overflow: hidden;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.05) 40%, rgba(255, 255, 255, 0.19) 100%), radial-gradient(70% 40px at center, rgba(0, 255, 0, 0.5) 0%, rgba(0, 255, 0, 0) 60%);
+}
+.node-editor .node .content {
+  display: table;
+  width: 100%;
+}
+.node-editor .node .content .col {
+  display: table-cell;
+  white-space: nowrap;
+}
+.node-editor .node .content .col:not(:last-child) {
+  padding-right: 20px;
+}
+.node-editor .node .input-title, .node-editor .node .output-title {
+  vertical-align: middle;
+  color: white;
+  display: inline-block;
+  font-family: sans-serif;
+  font-size: 14px;
+  margin: 10px 0;
+  line-height: 16px;
+}
+.node-editor .node .input-control {
+  z-index: 1;
+  vertical-align: middle;
+  display: inline-block;
+}
+.node-editor .node .input-control, .node-editor .node .output-control {
+  width: 100%;
+  padding: 10px 18px;
+}
+.node-editor .node select, .node-editor .node input {
+  width: 60px;
+  background-color: transparent;
+  padding: 2px 6px;
+  border: 1px solid white;
+  font-size: 14px;
+  color: white;
+  border-radius: 0;
+}
+
+.custom-menu .context-menu {
+  left: 0;
+  top: 0;
+  position: absolute;
+  padding: 10px;
+  margin-top: -20px;
+  width: auto !important;
+}
+.custom-menu .context-menu > .item, .custom-menu .context-menu > .search {
+  margin-left: -80%;
+}
+.custom-menu .context-menu > .item .subitems {
+  position: absolute;
+  display: none;
+  left: 100%;
+  top: 0;
+  border-radius: 7px;
+  overflow: overlay;
+}
+.custom-menu .context-menu > .item:hover .subitems {
+  display: block;
+}
+.custom-menu .context-menu > .item.have-subitems {
+  padding-right: 16px;
+}
+.custom-menu .context-menu > .item.have-subitems:after {
+  content: "►";
+  position: absolute;
+  opacity: 0.6;
+  right: 5px;
+  top: 5px;
+}
+.custom-menu .context-menu .item, .custom-menu .context-menu .search {
+  padding: 4px !important;
+  border-bottom: 1px solid rgba(15, 15, 15, 0.7) !important;
+  color: #fff !important;
+  background-color: rgba(35, 35, 35, 0.7) !important;
+  cursor: pointer !important;
+  width: auto !important;
+  position: relative !important;
+}
+.custom-menu .context-menu .item:first-child {
+  border-radius: 7px 7px 0 0;
+}
+.custom-menu .context-menu .item:last-child {
+  border-radius: 0 0 7px 7px;
+}
+.custom-menu .context-menu .item:hover {
+  background-color: rgba(45, 45, 45, 0.7) !important;
+}
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app"></div>
+    <!-- built files will be auto injected -->
+  </body>
+</html>

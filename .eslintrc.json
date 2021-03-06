@@ -1,0 +1,17 @@
+{
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es2021": true
+    },
+    "parserOptions": {
+        "ecmaVersion": 12,
+        "parser": "babel-eslint"
+    },
+    "rules": {},
+    "root": true,
+    "extends": [
+        "plugin:vue/essential",
+        "@vue/standard"
+    ]
+}

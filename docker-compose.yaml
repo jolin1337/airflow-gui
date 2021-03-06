@@ -1,0 +1,53 @@
+networks:
+  default:
+    external:
+      name: local_default
+services:
+  app:
+    command: vue ui -H 0.0.0.0
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    working_dir: /home/dev/workspace/app/
+    privileged: true
+    ports:
+      - 8000:8000
+      - 8082:8080
+    volumes:
+      - ./app/:/home/dev/workspace/app:rw
+    networks:
+      - default
+
+  graphql-engine:
+    image: hasura/graphql-engine:v1.3.3
+    ports:
+      - "8085:8080"
+    restart: always
+    networks:
+      - default
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://airflow:airflow@postgres:5432/airflow
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true" # set to "false" to disable console
+      ## uncomment next line to set an admin secret
+      # HASURA_GRAPHQL_ADMIN_SECRET: myadminsecretkey
+
+  templateserver:
+    build:
+      context: .
+      args:
+        - DOCKER_UID=1000
+      dockerfile: Dockerfile
+    entrypoint: flask run --host=0.0.0.0
+    volumes:
+      - ./api:/app
+    working_dir: /app
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=/app/app.py
+      - PYTHONPATH=/app/kirby/scheduled/dags/
+    ports:
+      - "5000:5000"
+    networks:
+      - default
+
+version: "2.0"

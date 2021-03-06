@@ -1,0 +1,5 @@
+node_modules
+.vscode
+*.pyc
+.autogit
+__pycache__.py
