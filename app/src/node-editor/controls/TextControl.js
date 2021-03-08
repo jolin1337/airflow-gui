@@ -8,6 +8,11 @@ export class TextControl extends Rete.Control {
     this.props = { emitter, ikey: key, readonly }
   }
 
+  putData (key, data) {
+    this.setValue(data)
+    this.getNode().data[key] = data
+  }
+
   setValue (val) {
     this.data.value = val
     this.vueContext.value = val

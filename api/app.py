@@ -37,11 +37,10 @@ def post_save_dag(dag_id):
     if not data.get('message'):
         return {'error': 'invalid message'}, 400
     dag = dag_bag.dags.get(dag_id)
-    dag_file = dag.full_filepath + '.new.py'
-    with open(dag_file, 'w') as f:
-        save_dag(f, dag, data['graph']['tasks'])
-        # TODO: Add save commit and optional save PR in kirby
-    return dag_graph(dag_id)
+    if dag and save_dag(dag, data['graph']['tasks'], commit_message=data['message'], create_pr=data.get('create_pr'))
+        return dag_graph(dag_id)
+    else:
+        return {'error': 'Unable to save dag'}, 400
 
 @app.route('/v1/dags/<string:dag_id>/trigger', methods=['POST'])
 def post_trigger_dag(dag_id):
@@ -83,7 +82,6 @@ def graphql():
     url = services['graphql']
     data = request.data
     req = requests.post(url, data=data)
-    print(req.text, req.status_code)
     return req.text, req.status_code
 
 

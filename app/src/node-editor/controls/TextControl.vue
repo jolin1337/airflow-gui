@@ -104,8 +104,11 @@ export default {
           value = JSON.parse(value)
         }
         this.value = value
+        this.$emit('input', value)
         this.update()
-      } catch (e) {}
+      } catch (e) {
+        console.error(e)
+      }
     },
     update () {
       if (this.ikey) this.putData(this.ikey, this.value)

@@ -40,6 +40,8 @@ services:
     entrypoint: flask run --host=0.0.0.0
     volumes:
       - ./api:/app
+      - $HOME/.gitconfig:/etc/gitconfig
+      - $HOME/.ssh:/home/airflow/.ssh:ro
     working_dir: /app
     environment:
       - FLASK_ENV=development

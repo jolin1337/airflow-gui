@@ -47,7 +47,7 @@
                 </v-card-title>
 
                 <v-card-text>
-                  <v-checkbox label="Create pull request in Kirby" v-model="createPR"></v-checkbox>
+                  <v-checkbox color="yellow darken-2" label="Create pull request in Kirby" v-model="createPR"></v-checkbox>
                   Dag name: {{dagId}}
                   <v-textarea v-model="saveDagMessage" color="secondary" label="Commit Message" counter :rules="[rules.length(20)]"></v-textarea>
                 </v-card-text>
@@ -133,9 +133,9 @@ export default {
     return {
       showMaxRuns: 10,
       currentJob: null,
-      triggerDagDialog: null,
+      triggerDagDialog: false,
       triggerDagConfiguration: '',
-      saveDagDialog: null,
+      saveDagDialog: false,
       saveDagMessage: '',
       createPR: false,
       rules: {
@@ -205,16 +205,18 @@ export default {
     validateSaveDag () {
       const options = {
         message: this.saveDagMessage,
-        createPR: this.createPR
+        create_pr: this.createPR
       }
       this.saveDag(options).then(() => {
-        this.dialog = false
+        console.log('YEYEY')
+        this.saveDagDialog = false
         this.saveDagMessage = ''
       })
     },
     validatetriggerDag () {
       this.triggerDag(this.triggerDagConfiguration).then(() => {
-        this.dialog = false
+        console.log('YEYEY')
+        this.triggerDagDialog = false
         this.triggerDagConfiguration = ''
       })
     }
