@@ -23,19 +23,10 @@
         >
       </v-btn>
       <v-btn icon v-else-if="dag.dag_runs.find((r) => r.state === 'failed')">
-        <v-icon color="red lighten-1" class="error-indicator"
-          >mdi-exclamation-thick</v-icon
-        >
+        <v-icon color="red lighten-1" class="error-indicator">mdi-exclamation-thick</v-icon>
       </v-btn>
-      <v-btn
-        icon
-        v-else-if="
-          dag.dag_runs.reduce((r, g) => g + (r.state === 'success'), 0) > 0
-        "
-      >
-        <v-icon color="green lighten-1" class="success-indicator"
-          >mdi-check</v-icon
-        >
+      <v-btn icon v-else-if="dag.dag_runs.length && !dag.dag_runs.find((r) => r.state === 'failed')">
+        <v-icon color="green lighten-1" class="success-indicator">mdi-check</v-icon>
       </v-btn>
     </v-list-item-action>
   </v-list-item>

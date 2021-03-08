@@ -29,7 +29,6 @@
             <v-toolbar
               color="primary"
               @mousedown.stop.prevent="dialog.value = dialog.value"
-              dark
             >
               <v-toolbar-title>{{ikey}}</v-toolbar-title>
               <v-spacer></v-spacer>

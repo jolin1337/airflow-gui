@@ -25,6 +25,14 @@ const routes = [
     // this generates a separate chunk (dag.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
     component: () => import(/* webpackChunkName: "dag" */ '../views/Dag.vue')
+  },
+  {
+    path: '/connections',
+    name: 'Connections',
+    // route level code-splitting
+    // this generates a separate chunk (dag.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () => import(/* webpackChunkName: "connections" */ '../views/ConnectionList.vue')
   }
 ]
 

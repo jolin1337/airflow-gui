@@ -12,10 +12,34 @@ import ReteMenu from '@/components/ReteMenu'
 import { ColorComponent } from '@/node-editor/components/ColorComponent'
 import { AFOperatorComponent } from '@/node-editor/components/AFOperatorComponent'
 
-export default async function (container, { dag, dockContainer, operators }) {
-  const tasks = dag.tasks
-  // const taskTypeNames = tasks.map(t => t.task_type)
-  // const tasksTypes = operators.map(o => o.operator_name)
+async function setupTasks (editor, tasks) {
+  let connections = []
+  const nodes = {}
+  const rootNodes = []
+  let maxConnections = 0
+  for (var task of tasks) {
+    const node = await editor.getComponent(task.task_type).createNode({ task })
+    const downstreams = task.downstream.map(taskId => [taskId, task.task_id])
+    connections = connections.concat(downstreams)
+    if (downstreams.length > maxConnections) maxConnections = downstreams.length
+    if (task.upstream.length > maxConnections) maxConnections = task.upstream.length
+    if (task.upstream.length === 0) rootNodes.push(node)
+    nodes[task.task_id] = node
+    editor.addNode(node)
+  }
+  connections.forEach(connection => {
+    const node1 = nodes[connection[0]]
+    const node2 = nodes[connection[1]]
+    editor.connect(node2.outputs.get('downstream_tasks'), node1.inputs.get('upstream_tasks'))
+  })
+  return {
+    nodes,
+    rootNodes,
+    maxConnections
+  }
+}
+
+export default async function (container, { dag, operators }) {
   var components = [
     new ColorComponent(),
     new AFOperatorComponent(),
@@ -44,7 +68,6 @@ export default async function (container, { dag, dockContainer, operators }) {
     editor.register(c)
     engine.register(c)
   })
-
   editor.on(
     'process nodecreated noderemoved connectioncreated connectionremoved',
     async () => {
@@ -64,27 +87,8 @@ export default async function (container, { dag, dockContainer, operators }) {
   editor.view.resize()
   AreaPlugin.zoomAt(editor)
 
-  let connections = []
-  const nodes = {}
-  const rootNodes = []
-  let maxConnections = 0
-  for (var task of tasks) {
-    const node = await editor.getComponent(task.task_type).createNode({ task })
-    const downstreams = task.downstream.map(taskId => [taskId, task.task_id])
-    connections = connections.concat(downstreams)
-    if (downstreams.length > maxConnections) maxConnections = downstreams.length
-    if (task.upstream.length > maxConnections) maxConnections = task.upstream.length
-    if (task.upstream.length === 0) rootNodes.push(node)
-    nodes[task.task_id] = node
-    editor.addNode(node)
-  }
-  connections.forEach(connection => {
-    const node1 = nodes[connection[0]]
-    const node2 = nodes[connection[1]]
-    editor.connect(node2.outputs.get('downstream_tasks'), node1.inputs.get('upstream_tasks'))
-  })
-
-  setTimeout(() => {
+  const { nodes, rootNodes, maxConnections } = await setupTasks(editor, dag.tasks)
+  setTimeout(async () => {
     editor.trigger('process')
     Object.values(nodes).forEach(node => editor.view.updateConnections({ node }))
     rootNodes.forEach(node => {

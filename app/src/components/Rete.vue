@@ -8,6 +8,7 @@
 </template>
 
 <script>
+import { mapActions, mapMutations, mapState } from 'vuex'
 import init from '@/node-editor'
 
 export default {
@@ -21,22 +22,42 @@ export default {
       selectedTask: null
     }
   },
+  computed: {
+    ...mapState({
+      dagRuns: state => (state.dags.selected || {}).runs
+    })
+  },
   watch: {
-    async operators () {
-      if (!this.rete) {
+    dagRuns () {
+      this.updateDagRunStates()
+    },
+    operators () {
+      this.initRete()
+    }
+  },
+  methods: {
+    ...mapMutations({
+      deselectTask: 'tasks/deselectTask'
+    }),
+    ...mapActions({
+      selectTask: 'tasks/selectTask'
+    }),
+    async initRete () {
+      if (!this.rete && this.operators) {
         this.rete = await init(this.$refs.rete, {
           dag: this.value,
           dockContainer: this.$refs.dock,
           operators: this.operators
         })
         this.rete.editor.on('nodeselected', (node) => {
-          if (!node.operator) {
+          if (!node.data.task) {
             this.selectedTask = null
-            this.$store.commit('tasks/deselectTask')
-          } else if (this.selectedTask === null || this.selectedTask !== node.data.task.task_id) {
+            this.deselectTask()
+          } else {
             this.selectedTask = node.data.task.task_id
-            this.$store.dispatch('tasks/selectTask', this.selectedTask)
+            this.selectTask(this.selectedTask)
           }
+          this.updateDagRunStates()
         })
         let timeoutId = null
         this.rete.editor.on('process nodetranslated nodecreated noderemoved connectioncreated connectionremoved', () => {
@@ -61,13 +82,27 @@ export default {
             })
             timeoutId = null
           }, 1000)
+          this.updateDagRunStates()
         })
       } else {
         // TODO: Lazyload new operators and update old ones
       }
+    },
+    updateDagRunStates () {
+      if (this.rete && this.dagRuns) {
+        this.dagRuns.jobs.forEach(run => {
+          run.executed_tasks.forEach(taskInstance => {
+            const node = this.rete.editor.nodes.find(node => (node.data.task || {}).task_id === taskInstance.task_id)
+            if (node) {
+              node.vueContext.state = taskInstance.state
+            }
+          })
+        })
+      }
     }
   },
-  methods: {
+  mounted () {
+    this.initRete()
   }
 }
 </script>

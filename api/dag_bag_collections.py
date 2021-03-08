@@ -82,6 +82,7 @@ def get_operators(dag_bag):
             task_type = task.task_type
             operators[task_type] = {}
             operators[task_type]['operator_name'] = task_type
+            operators[task_type]['operator_module'] = task.__module__
             arguments = {}
             classes = [task.__class__]
             super_classes = list(task.__class__.__bases__)

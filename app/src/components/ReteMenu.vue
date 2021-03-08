@@ -44,3 +44,57 @@ export default {
   }
 }
 </script>
+
+<style>
+
+.custom-menu .context-menu {
+  left: 0;
+  top: 0;
+  position: absolute;
+  padding: 10px;
+  margin-top: -20px;
+  width: auto !important;
+}
+.custom-menu .context-menu > .item, .custom-menu .context-menu > .search {
+  margin-left: -80%;
+}
+.custom-menu .context-menu > .item .subitems {
+  position: absolute;
+  display: none;
+  left: 100%;
+  top: 0;
+  border-radius: 7px;
+  overflow: overlay;
+}
+.custom-menu .context-menu > .item:hover .subitems {
+  display: block;
+}
+.custom-menu .context-menu > .item.have-subitems {
+  padding-right: 16px;
+}
+.custom-menu .context-menu > .item.have-subitems:after {
+  content: "►";
+  position: absolute;
+  opacity: 0.6;
+  right: 5px;
+  top: 5px;
+}
+.custom-menu .context-menu .item, .custom-menu .context-menu .search {
+  padding: 4px !important;
+  border-bottom: 1px solid rgba(15, 15, 15, 0.7) !important;
+  color: #fff !important;
+  background-color: rgba(35, 35, 35, 0.9) !important;
+  cursor: pointer !important;
+  width: auto !important;
+  position: relative !important;
+}
+.custom-menu .context-menu .item:first-child {
+  border-radius: 7px 7px 0 0;
+}
+.custom-menu .context-menu .item:last-child {
+  border-radius: 0 0 7px 7px;
+}
+.custom-menu .context-menu .item:hover {
+  background-color: rgba(45, 45, 45, 0.9) !important;
+}
+</style>

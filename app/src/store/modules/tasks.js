@@ -8,7 +8,7 @@ export default {
   getters: {},
   actions: {
     selectTask ({ commit, rootState }, taskId) {
-      tasksAPI.getTask(rootState.dags.selected.dag_id, taskId).then((task) => {
+      tasksAPI.getTask(rootState.dags.selected.id, taskId).then((task) => {
         commit('selectTask', task)
       }).catch(e => commit('deselectTask'))
     }
