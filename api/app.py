@@ -34,10 +34,13 @@ def dag_graph(dag_id):
 @app.route('/v1/dags/<string:dag_id>/graph', methods=['POST'])
 def post_save_dag(dag_id):
     data = json.loads(request.data)
+    if not data.get('message'):
+        return {'error': 'invalid message'}, 400
     dag = dag_bag.dags.get(dag_id)
     dag_file = dag.full_filepath + '.new.py'
     with open(dag_file, 'w') as f:
         save_dag(f, dag, data['graph']['tasks'])
+        # TODO: Add save commit and optional save PR in kirby
     return dag_graph(dag_id)
 
 @app.route('/v1/dags/<string:dag_id>/trigger', methods=['POST'])

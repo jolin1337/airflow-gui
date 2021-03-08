@@ -67,8 +67,8 @@ export default {
     const response = await axios.get(`/v1/dags/${dagId}/graph`)
     return response.data.graph
   },
-  async saveDagGraph (graph) {
-    const response = await axios.post(`/v1/dags/${graph.dag_id}/graph`, { graph })
+  async saveDagGraph (graph, options) {
+    const response = await axios.post(`/v1/dags/${graph.dag_id}/graph`, { graph, ...options })
     return response.data
   },
   async triggerDag (dagId, conf) {

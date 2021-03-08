@@ -47,8 +47,9 @@
                 </v-card-title>
 
                 <v-card-text>
+                  <v-checkbox label="Create pull request in Kirby" v-model="createPR"></v-checkbox>
                   Dag name: {{dagId}}
-                  <v-textarea color="secondary" label="Commit Message" counter :rules="[rules.length(20)]"></v-textarea>
+                  <v-textarea v-model="saveDagMessage" color="secondary" label="Commit Message" counter :rules="[rules.length(20)]"></v-textarea>
                 </v-card-text>
 
                 <v-divider></v-divider>
@@ -135,6 +136,8 @@ export default {
       triggerDagDialog: null,
       triggerDagConfiguration: '',
       saveDagDialog: null,
+      saveDagMessage: '',
+      createPR: false,
       rules: {
         length: len => v => (v || '').length <= len || `Warning, recommended commit messages are max ${len} characters`
       }
@@ -200,8 +203,13 @@ export default {
       triggerDag: 'dags/triggerDag'
     }),
     validateSaveDag () {
-      this.saveDag().then(() => {
+      const options = {
+        message: this.saveDagMessage,
+        createPR: this.createPR
+      }
+      this.saveDag(options).then(() => {
         this.dialog = false
+        this.saveDagMessage = ''
       })
     },
     validatetriggerDag () {

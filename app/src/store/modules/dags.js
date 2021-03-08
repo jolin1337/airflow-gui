@@ -23,8 +23,8 @@ export default {
         commit('setDagGraph', dag)
       }).catch(() => commit('deselectDagGraph'))
     },
-    saveSelectedDag ({ state }) {
-      dagsAPI.saveDagGraph(state.selected.graph)
+    saveSelectedDag ({ state }, options) {
+      dagsAPI.saveDagGraph(state.selected.graph, options)
     },
     triggerDag ({ state }, configuration) {
       dagsAPI.triggerDag(state.selected.id, configuration)
