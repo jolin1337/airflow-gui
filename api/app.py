@@ -1,13 +1,17 @@
 import inspect
-import requests
 import json
+import os
 
+import requests
 from flask import Flask, redirect, request
-from projects.eloqua.bbm_ces_to_eloqua import dag
-from dag_bag_collections import dag_bag, get_operators, filter_operator_arguments
-from dag_generator import save_dag, dag_to_dict
-app = Flask(__name__)
-operators = get_operators(dag_bag)
+
+from log import logger
+
+from dag_bag_collections import (filter_operator_arguments, get_dags,
+                                 get_operators)
+from dag_generator import dag_to_dict, save_dag
+operators = get_operators()
+dag_bag = get_dags()
 
 services = {
     'frontend': 'http://192.168.0.106:8082/',
@@ -15,9 +19,14 @@ services = {
     'airflow': 'http://192.168.0.106:8080/'
 }
 
+
+app = Flask(__name__)
+
+
 @app.route('/')
 def index_app_redirect():
     return redirect(services['frontend'])
+
 
 @app.route('/v1/dags/<string:dag_id>/graph')
 def dag_graph(dag_id):
@@ -31,19 +40,25 @@ def dag_graph(dag_id):
     }
     return resp
 
+
 @app.route('/v1/dags/<string:dag_id>/graph', methods=['POST'])
 def post_save_dag(dag_id):
     data = json.loads(request.data)
     if not data.get('message'):
         return {'error': 'invalid message'}, 400
     dag = dag_bag.dags.get(dag_id)
-    if dag and save_dag(dag, data['graph']['tasks'], commit_message=data['message'], create_pr=data.get('create_pr'))
+    if dag and save_dag(dag, data['graph']['tasks'], commit_message=data['message'], create_pr=data.get('create_pr')):
         return dag_graph(dag_id)
     else:
         return {'error': 'Unable to save dag'}, 400
 
+
 @app.route('/v1/dags/<string:dag_id>/trigger', methods=['POST'])
 def post_trigger_dag(dag_id):
+    url = services['airflow'] + f'/api/experimental/dags/{dag_id}/dag_runs'
+    resp = requests.post(url)
+    print(resp.text)
+    return 'resp.text'  # , resp.status_code
     url = services['airflow'] + '/admin/airflow/trigger'
     data = json.loads(request.data)
     query = f'?dag_id={dag_id}&origin=/admin/airflow/tree?dag_id={dag_id}'
@@ -58,6 +73,7 @@ def post_trigger_dag(dag_id):
     }
     resp = requests.post(url + query, cookies=cookies, files=files)
     return resp.text, resp.status_code
+
 
 @app.route('/v1/dags/<string:dag_id>/tasks/<string:task_id>')
 def task_info(dag_id, task_id):
@@ -90,3 +106,7 @@ def get_operators():
     return {
         'operators': list(operators.values())
     }
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000))
