@@ -1,7 +1,10 @@
 """ add additional DAGs folders to be used by airflow to check where to look for dag files """
 import os
+import json
 import importlib
+import textwrap
 import inspect
+from datetime import datetime, timedelta
 
 from airflow.models.baseoperator import BaseOperator
 from airflow.models import DagBag
@@ -9,10 +12,56 @@ from airflow.models import DagBag
 dag_bag = DagBag()
 
 
+def __add_import(what, imports, module=None, alias=None):
+    if imports is None:
+        return
+    if module is None:
+        imp = f'import {what}'
+    else:
+        imp = f'from {module} import {what}'
+    if alias is not None:
+        imp += f' as {alias}'
+    imports.add(imp)
+
+
+def stringify_value(value, indentation=0, imports=None):
+    if value is None:
+        return 'None'
+    if isinstance(value, datetime):
+        __add_import('datetime', imports)
+        return f'datetime.datetime({value.year}, {value.month}, {value.day}, {value.hour}, {value.minute}, {value.second})'
+    if isinstance(value, timedelta):
+        __add_import('datetime', imports)
+        return f'datetime.timedelta(days={value.days}, seconds={value.seconds})'
+    if isinstance(value, bool) or isinstance(value, int) or isinstance(value, float):
+        return f'{value}'
+    if isinstance(value, str) and '\n' in value:
+        return textwrap.indent(f'\'\'\'{value}\'\'\'', '    ' * indentation)
+    if isinstance(value, str):
+        return json.dumps(value)  # f'\'{value}\''
+    if isinstance(value, dict):
+        value_str = '{  '
+        for k, v in value.items():
+            value_str += f'"{k}": {stringify_value(v, indentation, imports)}, '
+        value_str = value_str[:-2] + '}'
+        return value_str
+    if isinstance(value, list):
+        value_str = '[  '
+        for v in value:
+            value_str += f'{stringify_value(v, indentation, imports)}, '
+        value_str = value_str[:-2] + ']'
+        return value_str
+    if callable(value):
+        return inspect.getsource(value)
+    return f'{value}'
+
+
 def collect_dags_in_dag_bag(dag_bag):
-    current_file_path = os.path.join(os.path.dirname(__file__), 'kirby/scheduled/dags')
+    current_file_path = os.path.join(
+        os.path.dirname(__file__), 'kirby/scheduled/dags')
     base_path = os.path.join(current_file_path, 'projects')
     dags_dirs = os.listdir(base_path)
+
     def process_file(file_path):
         # TODO: Use this method istead of dag_bag.process_file
         if __file__.endswith(os.path.basename(file_path)) or not file_path.endswith('.py') or not os.path.isfile(file_path):
@@ -20,7 +69,7 @@ def collect_dags_in_dag_bag(dag_bag):
         file_path = file_path.replace(current_file_path, '').strip('/')
         module = importlib.import_module(
             file_path[:-len('.py')].replace('/', '.'))
-        #for key, data in inspect.getmembers(module, inspect.isclass):
+        # for key, data in inspect.getmembers(module, inspect.isclass):
         # dag_bag.process_file(os.path.join(, f))
 
     for f in os.listdir(current_file_path):
@@ -40,49 +89,17 @@ def collect_dags_in_dag_bag(dag_bag):
         globals()[dag_id] = dag
 
 
-def register_base_operator_injection(task_instances):
-    class Dummy:
-        pass
-
-    def base_init_method(self, *args, **kwargs):
-        base_operator_init(self, *args, **kwargs)
-        frame = inspect.currentframe()
-        frame_locals = frame.f_locals.copy()
-        while frame.f_back is not None and isinstance(frame.f_back.f_locals.get('self', Dummy()), BaseOperator):
-            frame = frame.f_back
-            frame_locals = {
-                **frame_locals,
-                **frame.f_locals.copy()
-            }
-
-        frame_locals.pop('frame')
-        frame_locals.pop('self')
-        if '__class__' in frame_locals:
-            frame_locals.pop('__class__')
-        if 'dag' in frame_locals.get('kwargs', {}) and 'dag' in frame_locals['kwargs']:
-            frame_locals['kwargs'].pop('dag')
-        if 'dag' in kwargs:
-            kwargs.pop('dag')
-        task_instances[self.dag.dag_id + '_' + self.task_id] = {
-            'operator_name': self.task_type,
-            'self_locals': frame_locals
-        }
-
-    base_operator_init = BaseOperator.__init__
-    BaseOperator.__init__ = base_init_method
-    return base_init_method
-
-def unregister_base_operator_injection(reset_method):
-    BaseOperator.__init__ = reset_method
-
-def get_operators(dag_bag):
+def get_operators():
+    temp_dagbag = DagBag()
+    collect_dags_in_dag_bag(temp_dagbag)
     operators = {}
-    for dag in dag_bag.dags.values():
+    for dag in temp_dagbag.dags.values():
         for task in dag.tasks:
             task_type = task.task_type
             operators[task_type] = {}
             operators[task_type]['operator_name'] = task_type
             operators[task_type]['operator_module'] = task.__module__
+            operators[task_type]['operator_about'] = task.__doc__
             arguments = {}
             classes = [task.__class__]
             super_classes = list(task.__class__.__bases__)
@@ -109,26 +126,87 @@ def get_operators(dag_bag):
                         param['default'] = annotations[1]
                     arguments[param['name']] = {
                         **param,
-                        **arguments.get(param['name'], {}) # First class in classes list should have priority for default values
+                        # First class in classes list should have priority for default values
+                        **arguments.get(param['name'], {})
                     }
             operators[task_type]['arguments'] = list(arguments.values())
     return operators
 
-def get_task_instances(dag_bag):
-    task_instances = {}
-    reset_method = register_base_operator_injection(task_instances)
-    collect_dags_in_dag_bag(dag_bag)
 
-    unregister_base_operator_injection(reset_method)
+def __override_operators(operators, task_instances):
+    def constructor_override(op_name, op_init):
+        def constructor_override(self, *args, **kwargs):
+            # task_type = type(self).__name__
+            op_init(self, *args, **kwargs)
+            task_id = kwargs.get('task_id')
+            dag_id = kwargs.get('dag').dag_id
+            task_instances[f'{dag_id}_{task_id}'] = {
+                'operator_name': op_name,
+                'arguments': {k: stringify_value(v) for k, v in kwargs.items()}
+            }
+        return constructor_override
+
+    op_resets = {}
+    for op in operators.values():
+        op_module = importlib.import_module(op['operator_module'])
+        op_class = getattr(op_module, op['operator_name'])
+        op_resets[op['operator_name'] +
+                  op['operator_module']] = op_class.__init__
+        op_class.__init__ = constructor_override(
+            op['operator_name'], op_class.__init__)
+    return op_resets
+
+
+def __reset_operators(operators, resets):
+    for op in operators.values():
+        op_module = importlib.import_module(op['operator_module'])
+        op_class = getattr(op_module, op['operator_name'])
+        op_class.__init__ = resets[op['operator_name'] + op['operator_module']]
+
+
+def get_task_instances(operators):
+    task_instances = {}
+    resets = __override_operators(operators, task_instances)
+    temp_dagbag = DagBag()
+    collect_dags_in_dag_bag(temp_dagbag)
+    # for dag in temp_dagbag.dags.values():
+    #     for task in dag.tasks:
+    #         arguments = filter_operator_arguments(operators[task.task_type], task)
+    #         task_instances[f'{dag.dag_id}_{task.task_id}'] = {
+    #             'operator_name': task.task_type,
+    #             'arguments': arguments
+    #         }
+    __reset_operators(operators, resets)
     return task_instances
 
 
-def filter_operator_arguments(operator, task_locals):
+def get_dags():
+    temp_dagbag = DagBag()
+    collect_dags_in_dag_bag(temp_dagbag)
+    return temp_dagbag
+
+
+def filter_operator_arguments(operator, self):
+    '''
+    OBS: This method assumes that we assign the parameters to self!
+    '''
     arguments = operator['arguments']
     res = {}
     for i, arg in enumerate(arguments):
-        if len(task_locals['args']) > i:
-           res[arg] = task_locals['args'][i]
+        res[arg['name']] = {
+            'name': arg['name'],
+            'value': stringify_value(getattr(self, arg['name'])),
+            'default': arg.get('default') or '"None"'
+        }
+    return res
+
+
+def filter_operator_arguments2(operator, task_locals):
+    arguments = operator['arguments']
+    res = {}
+    for i, arg in enumerate(arguments):
+        if len(task_locals.get('args', [])) > i:
+            res[arg] = task_locals['args'][i]
         elif task_locals['kwargs'].get(arg['name']) is not None:
             res[arg['name']] = task_locals['kwargs'][arg['name']]
         elif task_locals.get(arg['name']) is not None and arg['name'] not in ['args', 'kwargs']:
