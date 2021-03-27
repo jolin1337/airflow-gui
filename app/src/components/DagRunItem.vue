@@ -1,6 +1,6 @@
 <template>
   <v-stepper-step
-    :step="jobId"
+    :step="runId"
     complete
     editable
     :color="color"
@@ -8,7 +8,7 @@
     :rules="[() => state !== 'failed']"
     class="dag-runs"
   >
-    <v-tooltip bottom v-if="jobId">
+    <v-tooltip bottom v-if="runId">
       <template v-slot:activator="{ on, attrs }">
         <small v-bind="attrs" v-on="on">
           <template v-if="state === 'failed'">Failed pipeline run</template>
@@ -25,7 +25,7 @@
 <script>
 export default {
   props: {
-    jobId: {
+    runId: {
       type: Number,
       default: () => 0
     },
@@ -44,7 +44,7 @@ export default {
         case 'failed': return undefined // Just the default red is good
         case 'running': return 'blue'
         case 'success': return 'green'
-        default: return this.jobId ? 'yellow' : 'green'
+        default: return this.runId ? 'yellow' : 'green'
       }
     }
   }

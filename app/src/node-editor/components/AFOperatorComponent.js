@@ -20,8 +20,9 @@ export class AFOperatorComponent extends Rete.Component {
     node.addInput(in1)
 
     const args = this.operator.arguments || []
+    node.data.operator = this.operator
     args.forEach(arg => {
-      const control = new TextControl(this.editor, arg.name)
+      const control = new TextControl(this.editor, arg.name, { documentation: this.operator.operator_about })
       const input = new Rete.Input('input_' + arg.name, arg.name, Socket.value, false)
       input.addControl(control)
       node.addInput(input)
@@ -38,17 +39,17 @@ export class AFOperatorComponent extends Rete.Component {
         downstream: [],
         arguments: {
           kwargs: {
-            task_id: 'new_node_' + node.id
+            task_id: `"new_node_${node.id}"`
           }
         }
       }
     }
     const nodeInstance = this.editor.nodes.find(n => n.id === node.id)
     Object.keys(node.data.task.arguments).forEach(key => {
-      const control = nodeInstance.inputs.get('input_' + key).control
-      if (!control.data.value) {
-        control.putData(key, node.data.task.arguments[key])
-        control.setValue(node.data.task.arguments[key])
+      const input = nodeInstance.inputs.get('input_' + key)
+      if (input && !input.control.data.value) {
+        input.control.putData(key, node.data.task.arguments[key])
+        input.control.setValue(node.data.task.arguments[key])
       }
     })
     node.data.task.upstream = []

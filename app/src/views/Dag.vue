@@ -1,118 +1,38 @@
 <template>
   <div>
-    <div id="dag" class="dag-info" v-if="reteDagModel && operators">
-      <v-stepper alt-labels v-model="currentJob">
-        <v-stepper-header>
-          <v-divider v-if="jobs.length <= 1"></v-divider>
-          <template v-if="jobs.length > 0">
-            <template v-for="(job, idx) in jobs">
-              <dag-job-item
-                :key="idx * 2"
-                :job-id="job.id"
-                :state="jobState(job)"
-                :execution-date="job.executed_tasks[0].execution_date"
-              />
-              <v-divider :key="idx * 2 + 1" v-if="idx + 1 < showMaxRuns && idx + 1 < jobs.length"></v-divider>
-            </template>
-          </template>
-          <template v-else>
-            <dag-job-item />
-          </template>
-          <v-divider v-if="jobs.length <= 1"></v-divider>
-        </v-stepper-header>
-      </v-stepper>
-      <task-instance-properties
-        v-if="currentJob"
-        :value="task && jobs.find(job => job.id === currentJob)"/>
+    <div id="dag" class="dag-info">
+      <v-skeleton-loader v-show="!ready"
+        type="date-picker, image, image, image"
+        class="mb-6 loader"
+        :elevation="2"
+      ></v-skeleton-loader>
+      <div :style="{'visibility': ready ? 'visible' : 'hidden'}" v-if="errorMessage.length === 0">
+        <template v-if="reteDagModel && operators">
 
-      <v-banner single-line sticky color="primary">
-        <v-toolbar
-          color="#121212"
-          small
-        >
-          <v-toolbar-items>
-            <v-dialog
-              v-model="saveDagDialog"
-              width="500"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn tex v-bind="attrs" v-on="on">
-                  <v-icon>mdi-content-save</v-icon>
-                  Save changes
-                </v-btn>
-              </template>
-              <v-card>
-                <v-card-title class="headline yellow darken-2">
-                  Save and commit changes
-                </v-card-title>
+          <v-parallax :src="image" height="300">
+            <edit-dag-button :value="dag" @input="validateSaveDag"/>
+            <div class="text-center green--text text-h5">{{dag.description}}</div>
 
-                <v-card-text>
-                  <v-checkbox color="yellow darken-2" label="Create pull request in Kirby" v-model="createPR"></v-checkbox>
-                  Dag name: {{dagId}}
-                  <v-textarea v-model="saveDagMessage" color="secondary" label="Commit Message" counter :rules="[rules.length(20)]"></v-textarea>
-                </v-card-text>
-
-                <v-divider></v-divider>
-
-                <v-card-actions>
-                  <v-spacer></v-spacer>
-                  <v-btn
-                    color="secondary"
-                    text
-                    @click="validateSaveDag()"
-                  >
-                    Save &amp; Commit
-                  </v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
-            <v-divider vertical></v-divider>
-
-            <v-dialog
-              v-model="triggerDagDialog"
-              width="500"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn text  v-bind="attrs" v-on="on">
-                  <v-icon>mdi-play</v-icon>
-                  Trigger DAG
-                </v-btn>
-              </template>
-
-              <v-card>
-                <v-card-title class="headline yellow darken-2">
-                  You are about to manually Trigger DAG
-                </v-card-title>
-
-                <v-card-text>
-                  Dag name: {{dagId}}
-                  <v-textarea color="secondary" label="Configuration (JSON)" v-model="triggerDagConfiguration"></v-textarea>
-                </v-card-text>
-
-                <v-divider></v-divider>
-
-                <v-card-actions>
-                  <v-spacer></v-spacer>
-                  <v-btn
-                    color="secondary"
-                    text
-                    @click="validatetriggerDag()"
-                  >
-                    Trigger DAG
-                  </v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
-            <v-divider vertical></v-divider>
-            <v-btn text>
-              <v-icon>mdi-backburger</v-icon>
-              Backfill period
-            </v-btn>
-            <v-divider vertical></v-divider>
-          </v-toolbar-items>
-        </v-toolbar>
-      </v-banner>
-      <rete v-model="reteDagModel" :operators="operators"/>
+            <remaining-time v-if="dag && dag.schedule_interval" :disabled="dag.is_paused" :cron="scheduleInterval">
+            </remaining-time>
+          </v-parallax>
+          <dag-run-states v-model="currentRun" />
+          <task-instance-properties
+            v-if="currentRun"
+            :value="task && currentDagRunState"/>
+          <dag-action-banner/>
+          <rete v-model="reteDagModel" :dag-run="currentDagRunState" :operators="operators" @ready="ready=true"/>
+          <dag-run-duration-chart v-if="dag && dag.dag_runs" :dag-runs="dag.dag_runs"/>
+        </template>
+      </div>
+      <div v-else>
+        <v-alert
+          type="error"
+          elevation="2">
+          <div v-html="errorMessage"></div>
+          Go back to the list of existing dags <router-link to="/">here.</router-link>
+        </v-alert>
+      </div>
     </div>
   </div>
 </template>
@@ -121,75 +41,66 @@
 import { mapState, mapMutations, mapActions } from 'vuex'
 import Rete from '@/components/Rete'
 import TaskInstanceProperties from '@/components/TaskInstanceProperties'
-import DagJobItem from '@/components/DagJobItem'
+import DagRunStates from '@/components/DagRunStates'
+import DagActionBanner from '@/components/DagActionBanner.vue'
+import RemainingTime from '@/components/RemainingTime'
+import EditDagButton from '@/components/EditDagButton'
+import image from '@/assets/gaming.png'
+import DagRunDurationChart from '@/components/DagRunDurationChart.vue'
 
 export default {
   components: {
     TaskInstanceProperties,
     Rete,
-    DagJobItem
+    DagRunStates,
+    DagActionBanner,
+    RemainingTime,
+    EditDagButton,
+    DagRunDurationChart
   },
   data () {
     return {
-      showMaxRuns: 10,
-      currentJob: null,
-      triggerDagDialog: false,
-      triggerDagConfiguration: '',
-      saveDagDialog: false,
-      saveDagMessage: '',
-      createPR: false,
-      rules: {
-        length: len => v => (v || '').length <= len || `Warning, recommended commit messages are max ${len} characters`
-      }
+      image,
+      currentRun: null,
+      ready: false,
+      innerHeight: window.innerHeight,
+      errorMessage: ''
     }
   },
   computed: {
     ...mapState({
       task: state => state.tasks.selected,
       dagGraph: state => (state.dags.selected || {}).graph,
-      dagRuns: state => (state.dags.selected || {}).runs,
+      dag: state => state.dags.selected,
       operators: state => state.operators.all
     }),
+    currentDagRunState () {
+      const dagRuns = this.dag.dag_runs || []
+      return dagRuns.find(dr => dr.id === this.currentRun)
+    },
     reteDagModel: {
       get () { return this.dagGraph },
       set (newVal) { this.updateDagGraph(newVal) }
     },
     dagId () {
-      return (this.dagRuns || {}).dag_id || (this.dagGraph || {}).dag_id
+      return this.$route.query.dag
     },
-    jobs () {
-      if (!this.dagRuns) {
-        return []
+    scheduleInterval () {
+      const cron = this.dag.schedule_interval
+      if (cron.startsWith('"') && cron.endsWith('"')) {
+        return cron.slice(1, -1)
+      } else {
+        return null
       }
-      const earliestJob = Math.max(0, this.dagRuns.jobs.length - this.showMaxRuns)
-      return this.dagRuns.jobs.slice(earliestJob).filter(job => {
-        return job.executed_tasks.length > 0
-      })
-    }
-  },
-  watch: {
-    dagRuns () {
-      if (this.currentJob === null && this.jobs.length > 0) {
-        this.currentJob = this.jobs[this.jobs.length - 1].id
+    },
+    dagPausedState () {
+      if (this.dag && this.dag.is_paused) {
+        return 'OFF'
       }
+      return 'ON'
     }
   },
   methods: {
-    jobHasFailed (job) {
-      return job.executed_tasks.find(t => t.state === 'failed') !== undefined
-    },
-    jobIsRunning (job) {
-      return job.executed_tasks.find(t => t.state === 'running') !== undefined
-    },
-    jobState (job) {
-      if (this.jobIsRunning(job)) {
-        return 'running'
-      }
-      if (this.jobHasFailed(job)) {
-        return 'failed'
-      }
-      return 'success'
-    },
     ...mapMutations({
       deselectDag: 'dags/deselectDag',
       deselectTask: 'tasks/deselectTask',
@@ -198,32 +109,31 @@ export default {
     ...mapActions({
       selectDagGraph: 'dags/selectDagGraph',
       selectDagRuns: 'dags/selectDagRuns',
-      getOperators: 'operators/getOperators',
-      saveDag: 'dags/saveSelectedDag',
-      triggerDag: 'dags/triggerDag'
+      saveDagGraph: 'dags/saveSelectedDagGraph',
+      getOperators: 'operators/getOperators'
     }),
-    validateSaveDag () {
+    async validateSaveDag ({ commitMessage, createPR }) {
       const options = {
-        message: this.saveDagMessage,
-        create_pr: this.createPR
+        message: commitMessage,
+        create_pr: createPR
       }
-      this.saveDag(options).then(() => {
-        console.log('YEYEY')
-        this.saveDagDialog = false
-        this.saveDagMessage = ''
-      })
+      return await this.saveDagGraph(options)
     },
-    validatetriggerDag () {
-      this.triggerDag(this.triggerDagConfiguration).then(() => {
-        console.log('YEYEY')
-        this.triggerDagDialog = false
-        this.triggerDagConfiguration = ''
-      })
+    toggleDagPaused () {
+      this.dag.is_paused = !this.dag.is_paused
+      // TODO: Call pause/resume dag API
     }
   },
   created () {
-    this.selectDagGraph(this.$route.query.dag)
-    this.selectDagRuns(this.$route.query.dag)
+    const dagId = this.$route.query.dag
+    this.selectDagGraph(dagId).catch(() => {
+      this.errorMessage += `<p>Unable to find DAG graph for ${dagId}</p>`
+      this.ready = true
+    })
+    this.selectDagRuns(dagId).catch(() => {
+      this.errorMessage += `<p>Unable to find DAG runs for ${dagId}</p>`
+      this.ready = true
+    })
     this.getOperators()
   },
   destroyed () {
@@ -236,6 +146,14 @@ export default {
 <style scoped>
 .dag-info {
   min-height: calc(100vh - 65px);
+  position: relative;
+}
+.dag-info .loader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 .dag__action-pane {
   padding: 0 15px;

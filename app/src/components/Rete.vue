@@ -14,7 +14,8 @@ import init from '@/node-editor'
 export default {
   props: {
     value: Object,
-    operators: Array
+    operators: Array,
+    dagRun: Object
   },
   data () {
     return {
@@ -24,11 +25,10 @@ export default {
   },
   computed: {
     ...mapState({
-      dagRuns: state => (state.dags.selected || {}).runs
     })
   },
   watch: {
-    dagRuns () {
+    dagRun () {
       this.updateDagRunStates()
     },
     operators () {
@@ -84,19 +84,18 @@ export default {
           }, 1000)
           this.updateDagRunStates()
         })
+        this.$emit('ready')
       } else {
         // TODO: Lazyload new operators and update old ones
       }
     },
     updateDagRunStates () {
-      if (this.rete && this.dagRuns) {
-        this.dagRuns.jobs.forEach(run => {
-          run.executed_tasks.forEach(taskInstance => {
-            const node = this.rete.editor.nodes.find(node => (node.data.task || {}).task_id === taskInstance.task_id)
-            if (node) {
-              node.vueContext.state = taskInstance.state
-            }
-          })
+      if (this.rete && this.dagRun) {
+        this.dagRun.task_instances.forEach(taskInstance => {
+          const node = this.rete.editor.nodes.find(node => (node.data.task || {}).task_id === taskInstance.task_id)
+          if (node) {
+            node.vueContext.state = taskInstance.state
+          }
         })
       }
     }

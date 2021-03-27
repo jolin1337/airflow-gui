@@ -39,9 +39,9 @@ export default {
           owners
           schedule_interval
           default_view
-          jobs {
+          dag_runs {
             id
-            executed_tasks {
+            task_instances {
               state
               task_id
               execution_date
@@ -57,8 +57,8 @@ export default {
     const response = await axios.post('/v1/graphql', data)
     if (response.data.data.dag.length > 0) {
       const dag = response.data.data.dag[0]
-      dag.jobs.sort((a, b) => {
-        return new Date((a.executed_tasks[0] || {}).execution_date) - new Date((b.executed_tasks[0] || {}).execution_date)
+      dag.dag_runs.sort((a, b) => {
+        return new Date((a.task_instances[0] || {}).execution_date) - new Date((b.task_instances[0] || {}).execution_date)
       })
       return response.data.data.dag[0]
     }

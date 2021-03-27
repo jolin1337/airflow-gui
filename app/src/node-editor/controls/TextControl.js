@@ -2,10 +2,10 @@ import Rete from 'rete'
 import VueTextControl from './TextControl.vue'
 
 export class TextControl extends Rete.Control {
-  constructor (emitter, key, readonly) {
+  constructor (emitter, key, { readonly, documentation }) {
     super(key)
     this.component = VueTextControl
-    this.props = { emitter, ikey: key, readonly }
+    this.props = { emitter, ikey: key, readonly, documentation }
   }
 
   putData (key, data) {

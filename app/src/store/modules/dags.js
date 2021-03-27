@@ -8,26 +8,33 @@ export default {
   }),
   getters: {},
   actions: {
-    getAllDags ({ commit }) {
-      dagsAPI.getDags().then((dags) => {
+    async getAllDags ({ commit }) {
+      return await dagsAPI.getDags().then((dags) => {
         commit('setDags', dags)
       })
     },
-    selectDagRuns ({ commit }, dagId) {
-      dagsAPI.getDagRuns(dagId).then(dag => {
+    async selectDagRuns ({ commit }, dagId) {
+      return await dagsAPI.getDagRuns(dagId).then(dag => {
         commit('setDagRuns', dag)
       })
     },
-    selectDagGraph ({ commit }, dagId) {
-      dagsAPI.getDagGraph(dagId).then((dag) => {
+    async selectDagGraph ({ commit }, dagId) {
+      return await dagsAPI.getDagGraph(dagId).then((dag) => {
         commit('setDagGraph', dag)
-      }).catch(() => commit('deselectDagGraph'))
+      }).catch((e) => {
+        commit('deselectDagGraph')
+        throw e
+      })
     },
-    saveSelectedDag ({ state }, options) {
-      dagsAPI.saveDagGraph(state.selected.graph, options)
+    async saveSelectedDagGraph ({ state }, options) {
+      return await dagsAPI.saveDagGraph(state.selected.graph, options)
     },
-    triggerDag ({ state }, configuration) {
-      dagsAPI.triggerDag(state.selected.id, configuration)
+    async saveSelectedDag ({ state }, options) {
+      const { graph, dagRuns, ...dag } = state.selected
+      return await dagsAPI.saveDag(dag, options)
+    },
+    async triggerDag ({ state }, configuration) {
+      return await dagsAPI.triggerDag(state.selected.id, configuration)
     }
   },
   mutations: {
@@ -47,7 +54,7 @@ export default {
       // TODO Validation
       state.selected = {
         id: runs.dag_id,
-        runs,
+        ...runs,
         ...(state.selected || {})
       }
     },

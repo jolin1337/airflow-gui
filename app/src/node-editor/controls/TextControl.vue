@@ -1,8 +1,6 @@
 <template>
   <div class="text-control" v-if="$vuetify.icons">
-    <label :for="'input_' + ikey" class="label">
-      {{ikey}}:
-    </label>
+    <label :for="'input_' + ikey" class="label"> {{ ikey }}: </label>
     <div>
       <v-dialog
         class="field-edit-dialog"
@@ -14,12 +12,7 @@
         max-width="600"
       >
         <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            color="primary"
-            v-bind="attrs"
-            v-on="on"
-            icon small
-          >
+          <v-btn color="primary" v-bind="attrs" v-on="on" icon small>
             <v-icon class="expand">mdi-expand-all</v-icon>
             <!-- <i aria-hidden="true" class="expand v-icon notranslate mdi theme--light mdi-expand-all"></i> -->
           </v-btn>
@@ -30,20 +23,33 @@
               color="primary"
               @mousedown.stop.prevent="dialog.value = dialog.value"
             >
-              <v-toolbar-title>{{ikey}}</v-toolbar-title>
+              <v-toolbar-title>{{ ikey }}</v-toolbar-title>
               <v-spacer></v-spacer>
               <v-toolbar-items>
-                <v-btn
-                  icon
-                  @click="dialog.value = false"
-                >
+                <v-btn icon @click="dialog.value = false">
                   <v-icon>mdi-close</v-icon>
                 </v-btn>
               </v-toolbar-items>
             </v-toolbar>
             <v-card-text>
+              <v-container>
+                <v-row>
+                  <v-col color="pink">
+                    {{ paramDescription }}
+                  </v-col>
+                </v-row>
+              </v-container>
               <div class="text-h2 pa-12">
-                <v-textarea ref="textarea" :readonly="readonly" @input="change($event)" :auto-grow="true" :full-width="true">
+                <v-textarea
+                  :value="value"
+                  color="secondary"
+                  label="Param value"
+                  ref="textarea"
+                  :readonly="readonly"
+                  @input="change($event)"
+                  :auto-grow="true"
+                  :full-width="true"
+                >
                 </v-textarea>
               </div>
             </v-card-text>
@@ -67,7 +73,7 @@
 
 <script>
 export default {
-  props: ['readonly', 'emitter', 'ikey', 'getData', 'putData'],
+  props: ['readonly', 'emitter', 'ikey', 'getData', 'putData', 'documentation'],
   data () {
     return {
       value: 0,
@@ -78,9 +84,26 @@ export default {
     stringifiedValue () {
       if (this.value instanceof Object) {
         return JSON.stringify(this.value, null, 4)
+      } else if (this.value !== undefined && this.value.startsWith && this.value.startsWith('"') && this.value.endsWith('"')) {
+        return this.value.slice(1, -1)
       } else {
         return this.value
       }
+    },
+    paramDescription () {
+      const abouts = this.documentation.split('\n')
+      const index = abouts.findIndex(e => {
+        return e.trim().startsWith(':param') && e.split(':param ')[1].split(' ')[0].slice(0, -1) === this.ikey
+      })
+      if (index >= 0) {
+        const param = abouts[index]
+        const endIndex = abouts.findIndex((e, idx) => {
+          if (idx <= index) return false
+          return e.trim().startsWith(':param') || e.trim().startsWith(':type')
+        })
+        return param.split(':param ')[1].split(' ').slice(1).join(' ') + abouts.slice(index + 1, endIndex)
+      }
+      return ''
     }
   },
   watch: {
@@ -103,8 +126,8 @@ export default {
         if (this.value instanceof Object) {
           value = JSON.parse(value)
         }
-        this.value = value
-        this.$emit('input', value)
+        this.value = `"${value}"`
+        this.$emit('input', this.value)
         this.update()
       } catch (e) {
         console.error(e)

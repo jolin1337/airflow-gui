@@ -3,52 +3,60 @@
     <v-banner single-line sticky color="accent">
         <v-row>
           <v-col>
-            <v-text-field color="secondary" label="Search dags" v-model="searchTerm"/>
-          </v-col>
-          <v-col cols="2" md="3" sm="4" style="text-align: right;">
-            <v-btn-toggle
-              v-model="dagFilters"
-              multiple
-            >
-              <v-tooltip bottom>
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn v-bind="attrs" v-on="on">
-                    <v-icon>mdi-exclamation-thick</v-icon>
-                  </v-btn>
-                </template>
-                <span>Filter success dags</span>
-              </v-tooltip>
-              <v-tooltip bottom>
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn v-bind="attrs" v-on="on">
-                    <v-icon>mdi-check</v-icon>
-                  </v-btn>
-                </template>
-                <span>Filter failed dags</span>
-              </v-tooltip>
-            </v-btn-toggle>
-          </v-col>
-          <v-col cols="1" style="text-align: right;">
-            <v-menu bottom left offset-y>
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn v-bind="attrs" v-on="on" icon tab tile large>
-                  <v-icon>mdi-chevron-down</v-icon>
-                </v-btn>
+            <v-text-field color="secondary" label="Search dags" v-model="searchTerm">
+              <template v-slot:append-outer>
+                <v-btn-toggle
+                  v-model="dagFilters"
+                  multiple
+                >
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn v-bind="attrs" v-on="on">
+                        <v-icon>mdi-exclamation-thick</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>Filter success dags</span>
+                  </v-tooltip>
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn v-bind="attrs" v-on="on">
+                        <v-icon>mdi-check</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>Filter failed dags</span>
+                  </v-tooltip>
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn v-bind="attrs" v-on="on">
+                        <v-icon>mdi-pause</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>Include paused dags</span>
+                  </v-tooltip>
+                </v-btn-toggle>
+                <v-menu bottom left offset-y>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn v-bind="attrs" v-on="on" icon tab tile large>
+                      <v-icon>mdi-chevron-down</v-icon>
+                    </v-btn>
+                  </template>
+                  <v-sheet
+                    color="primary"
+                    elevation="1"
+                    height="300"
+                    width="300">
+                    <v-content>
+                      <v-row>
+                        <v-col>
+                          Additional filter stuff
+                        </v-col>
+                      </v-row>
+                    </v-content>
+                  </v-sheet>
+                </v-menu >
               </template>
-              <v-sheet
-                color="primary"
-                elevation="1"
-                height="300"
-                width="300">
-                <v-content>
-                  <v-row>
-                    <v-col>
-                      Additional filter stuff
-                    </v-col>
-                  </v-row>
-                </v-content>
-              </v-sheet>
-            </v-menu ></v-col>
+            </v-text-field>
+          </v-col>
         </v-row>
     </v-banner>
     <v-list>
@@ -71,7 +79,7 @@ export default {
   data () {
     return {
       searchTerm: '',
-      dagFilters: []
+      dagFilters: [2]
     }
   },
   components: {
@@ -90,6 +98,8 @@ export default {
               return dag.dag_runs.find(r => r.state === 'failed')
             case 1: // succeeded tasks
               return dag.dag_runs.length > 0 && !dag.dag_runs.find((r) => r.state === 'failed')
+            case 2: // include Paused dags
+              return !dag.is_paused
             default:
               return false
           }

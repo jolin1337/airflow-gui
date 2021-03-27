@@ -46,6 +46,19 @@
           </v-list-item>
         </v-list-item-group>
       </v-list>
+
+      <v-sparkline
+        :value="taskRuns.map(t => t.duration || 0)"
+        :labels="taskRuns.map(t => (round(t.duration) || 0) + 's')"
+        :show-labels="true"
+        color="rgba(255, 255, 255, .7)"
+        height="100"
+        padding="24"
+        stroke-linecap="round"
+        line-width="1"
+        :smooth="5"
+        auto-draw
+      ></v-sparkline>
     </v-navigation-drawer>
   </div>
 </template>
@@ -62,26 +75,34 @@ export default {
     }
   },
   computed: {
-    job () { return this.value },
     ...mapState({
-      taskId: state => (state.tasks.selected || {}).task_id
+      taskId: state => (state.tasks.selected || {}).task_id,
+      taskRuns (state) {
+        const dag = state.dags.selected || {}
+        const dagRuns = dag.dag_runs || []
+        return dagRuns.map(dr => dr.task_instances.find(t => t.task_id === this.taskId)).filter(Boolean)
+      }
     }),
+    run () { return this.value },
     executedTask () {
-      if (!this.job) {
+      if (!this.run) {
         return
       }
-      const run = this.job.executed_tasks.find(e => e.task_id === this.taskId)
+      const run = this.run.task_instances.find(e => e.task_id === this.taskId)
       return run
     },
     drawer: {
-      get () { return this.job !== null },
+      get () { return this.run !== null },
       set (val) { val === false && this.deselectTask() }
     }
   },
   methods: {
     ...mapMutations({
       deselectTask: 'tasks/deselectTask'
-    })
+    }),
+    round (number, dec = 1000) {
+      return parseInt(number * dec) / dec
+    }
   },
   mounted () {
   }

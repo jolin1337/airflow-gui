@@ -1,41 +1,69 @@
 <template>
-  <div class="node" v-if="$vuetify.icons" :class="[selected(), node.name] | kebab">
-    <v-btn icon style="position: absolute;color: white" @click="toggleCompact()">
+  <div
+    class="node"
+    v-if="$vuetify.icons"
+    :class="[selected(), node.name] | kebab"
+  >
+    <v-btn
+      icon
+      style="position: absolute; color: white"
+      @click="toggleCompact()"
+    >
       <!-- <i aria-hidden="true" :class="['v-icon notranslate mdi theme--light', { 'mdi-chevron-down': compact, 'mdi-chevron-up': !compact }]"></i>-->
       <v-icon v-if="compact">mdi-chevron-down</v-icon>
       <v-icon v-else>mdi-chevron-up</v-icon>
     </v-btn>
-    <div :class="['title', stateClass]">
-      {{node.name}}
-    </div>
+    <v-tooltip top>
+      <template v-slot:activator="{ on, attrs }">
+        <div :class="['title', stateClass]" v-bind="attrs" v-on="on">
+          {{ node.name }}
+        </div>
+      </template>
+      <span v-html="operatorDescription"></span>
+    </v-tooltip>
     <div class="content">
       <div class="col" v-if="node.controls.size > 0 || node.inputs.size > 0">
         <template v-for="input in inputs()">
-          <div :class="['input', { 'hide': isInputShowing(input) }]"
-              :key="input.key"
-              style="text-align: left"
-              v-show="isInputShowing(input)">
+          <div
+            :class="['input', { hide: isInputShowing(input) }]"
+            :key="input.key"
+            style="text-align: left"
+            v-show="isInputShowing(input)"
+          >
             <Socket
               v-socket:input="input"
               type="input"
               :socket="input.socket"
               :multiple="input.connections.length > 1"
-              :used="input.connections.length > 0"/>
-            <div class="input-title" v-show="!input.showControl()">{{input.name}}</div>
-            <div class="input-control" v-if="input.showControl()" v-control="input.control"></div>
+              :used="input.connections.length > 0"
+            />
+            <div class="input-title" v-show="!input.showControl()">
+              {{ input.name }}
+            </div>
+            <div
+              class="input-control"
+              v-if="input.showControl()"
+              v-control="input.control"
+            ></div>
           </div>
         </template>
-        <div class="control" v-for="(control, idx) in controls()" v-control="control" v-bind:key="idx"></div>
+        <div
+          class="control"
+          v-for="(control, idx) in controls()"
+          v-control="control"
+          v-bind:key="idx"
+        ></div>
       </div>
       <div class="col">
         <div class="output" v-for="output in outputs()" :key="output.key">
-          <div class="output-title">{{output.name}}</div>
+          <div class="output-title">{{ output.name }}</div>
           <Socket
             v-socket:output="output"
             type="output"
             :socket="output.socket"
             :multiple="output.connections.length > 1"
-            :used="output.connections.length > 0"/>
+            :used="output.connections.length > 0"
+          />
         </div>
       </div>
     </div>
@@ -56,7 +84,7 @@ export default {
       this.$nextTick(() => this.editor.view.updateConnections({ node: this.node }))
     },
     isInputShowing (input) {
-      const controlHasValue = input.control && input.control.vueContext && input.control.vueContext.value
+      const controlHasValue = input.control && input.control.vueContext && input.control.vueContext.value && !['"None"'].includes(input.control.vueContext.value)
       return !this.compact || input.connections.length > 0 || controlHasValue || !input.control
     }
   },
@@ -64,6 +92,18 @@ export default {
     stateClass () {
       if (this.state === 'failed') return 'error'
       return this.state
+    },
+    operatorDescription () {
+      const operator = this.node.data.operator || {}
+      const about = operator.operator_about
+      if (about) {
+        const abouts = about.split('\n')
+        let firstParamIndex = abouts.findIndex(e => e.trim().startsWith(':param') || e.trim().startsWith(':type'))
+        if (firstParamIndex < 0) firstParamIndex = abouts.length
+        console.log(abouts, firstParamIndex)
+        return abouts.slice(0, firstParamIndex).join('<br/>')
+      }
+      return ''
     }
   },
   data () {
@@ -113,10 +153,30 @@ export default {
   border-radius: 10px 10px 0 0;
   padding: 8px;
   overflow: hidden;
-  background: linear-gradient(to top, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.05) 40%, rgba(255, 255, 255, 0.19) 100%), radial-gradient(70% 40px at center, rgba(0, 255, 0, 0.5) 0%, rgba(0, 255, 0, 0) 60%);
+  background: linear-gradient(
+      to top,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.05) 40%,
+      rgba(255, 255, 255, 0.19) 100%
+    ),
+    radial-gradient(
+      70% 40px at center,
+      rgba(0, 255, 0, 0.5) 0%,
+      rgba(0, 255, 0, 0) 60%
+    );
 }
 .node-editor .node .title.error {
-  background: linear-gradient(to top, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.05) 40%, rgba(255, 255, 255, 0.19) 100%), radial-gradient(70% 40px at center, rgba(255, 0, 47, 0.5) 0%, rgba(0, 255, 0, 0) 60%);
+  background: linear-gradient(
+      to top,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.05) 40%,
+      rgba(255, 255, 255, 0.19) 100%
+    ),
+    radial-gradient(
+      70% 40px at center,
+      rgba(255, 0, 47, 0.5) 0%,
+      rgba(0, 255, 0, 0) 60%
+    );
 }
 .node-editor .node .content {
   display: table;
@@ -129,7 +189,8 @@ export default {
 .node-editor .node .content .col:not(:last-child) {
   padding-right: 20px;
 }
-.node-editor .node .input-title, .node-editor .node .output-title {
+.node-editor .node .input-title,
+.node-editor .node .output-title {
   vertical-align: middle;
   color: white;
   display: inline-block;
@@ -143,11 +204,13 @@ export default {
   vertical-align: middle;
   display: inline-block;
 }
-.node-editor .node .input-control, .node-editor .node .output-control {
+.node-editor .node .input-control,
+.node-editor .node .output-control {
   width: 100%;
   padding: 10px 18px;
 }
-.node-editor .node select, .node-editor .node input {
+.node-editor .node select,
+.node-editor .node input {
   width: 60px;
   background-color: transparent;
   padding: 2px 6px;
@@ -156,5 +219,4 @@ export default {
   color: white;
   border-radius: 0;
 }
-
 </style>
