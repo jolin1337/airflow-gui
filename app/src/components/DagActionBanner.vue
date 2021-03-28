@@ -1,5 +1,5 @@
 <template>
-  <v-banner single-line sticky color="primary">
+  <v-banner single-line sticky>
     <v-toolbar
       color="#121212"
       small

@@ -47,6 +47,7 @@ services:
       - FLASK_ENV=development
       - FLASK_APP=/app/app.py
       - PYTHONPATH=/app/kirby/scheduled/dags/
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
     ports:
       - "5000:5000"
     networks:

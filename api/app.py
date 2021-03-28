@@ -1,6 +1,7 @@
 import inspect
 import json
 import os
+import pendulum
 
 import requests
 from flask import Flask, redirect, request
@@ -55,24 +56,15 @@ def post_save_dag(dag_id):
 
 @app.route('/v1/dags/<string:dag_id>/trigger', methods=['POST'])
 def post_trigger_dag(dag_id):
-    url = services['airflow'] + f'/api/experimental/dags/{dag_id}/dag_runs'
-    resp = requests.post(url)
-    print(resp.text)
-    return 'resp.text'  # , resp.status_code
-    url = services['airflow'] + '/admin/airflow/trigger'
-    data = json.loads(request.data)
-    query = f'?dag_id={dag_id}&origin=/admin/airflow/tree?dag_id={dag_id}'
-    # TODO: Authenticate towards airflow with session (e.q. request services['airflow'] + '/admin' to retrieve session and csrf_token)
-    cookies = {
-        'session': 'eyJfZnJlc2giOmZhbHNlLCJjc3JmX3Rva2VuIjoiMTRkMTFhOGI0NDBhYzc1NjcwNGRhZWY3YmY1NzE1MjE2MDc4YTJmMSJ9.YEXVnA.gzhUyzAAiK8PJS08eHKGdZ33w6A'
-    }
-    files = {
-        'dag_id': (None, data['dag_id']),
-        'conf': (None, data['conf']),
-        'csrf_token': (None, 'IjE0ZDExYThiNDQwYWM3NTY3MDRkYWVmN2JmNTcxNTIxNjA3OGEyZjEi.YEXVnA.KGp4b52IPCIDUztxXvK7F5LNtTQ')
-    }
-    resp = requests.post(url + query, cookies=cookies, files=files)
-    return resp.text, resp.status_code
+    dag = dag_bag.dags.get(dag_id)
+    if dag is None:
+        print("Dag was not found:", dag_id)
+        return {'error': 'Unkown dag id'}, 404
+    print("running dag")
+    now = pendulum.now()
+    # Runs dag inplace
+    #print("RUN dag", dag.run(start_date=now, end_date=now))
+    print("create dagrun", dag.create_dagrun(f'airflow_gui_{now}', start_date=now, execution_date=now, external_trigger=True, state=None))
 
 
 @app.route('/v1/dags/<string:dag_id>/tasks/<string:task_id>')
@@ -92,6 +84,25 @@ def task_info(dag_id, task_id):
         }
     }
 
+
+@app.route('/v1/dags/<string:dag_id>/tasks/<string:task_id>/logs')
+def get_task_log(dag_id, task_id):
+    dag = dag_bag.dags.get(dag_id)
+    if dag is None:
+        print("Dag was not found:", dag_id)
+        return {'error': 'Unkown dag id'}, 404
+    task = dag.task_dict.get(task_id)
+    if task is None:
+        print("Task was not found:", task_id)
+        return {'error': 'Unkown task id'}, 404
+    data = {
+        **dict(request.args),
+        'dag_id': dag_id,
+        'task_id': task_id
+    }
+    print(data)
+    resp = requests.get(services['airflow'] + '/admin/airflow/get_logs_with_metadata', params=data)
+    return resp.text, resp.status_code
 
 @app.route('/v1/graphql', methods=['POST'])
 def graphql():

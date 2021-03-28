@@ -59,30 +59,54 @@
         :smooth="5"
         auto-draw
       ></v-sparkline>
+      <v-container v-if="log" class="white--text">
+        <v-row>
+          <v-col align-self="center">
+            <h3>Logs:</h3>
+          </v-col>
+          <v-col cols="auto">
+            <v-switch hide-details
+              color="primary"
+              v-model="wrapLogs"
+              inset
+              label="Wrap text"
+            ></v-switch>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-sheet :class="{ 'text-no-wrap': wrapLogs }" max-height="400" style="overflow: auto" v-html="log.message.split('\n').join('<br/>')">
+            </v-sheet>
+          </v-col>
+        </v-row>
+      </v-container>
     </v-navigation-drawer>
   </div>
 </template>
 
 <script>
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapMutations, mapActions } from 'vuex'
 export default {
   props: {
     value: Object
   },
   data () {
     return {
-      group: 'test2'
+      group: 'test2',
+      log: undefined,
+      wrapLogs: false
     }
   },
   computed: {
     ...mapState({
-      taskId: state => (state.tasks.selected || {}).task_id,
+      task: state => state.tasks.selected,
       taskRuns (state) {
         const dag = state.dags.selected || {}
         const dagRuns = dag.dag_runs || []
         return dagRuns.map(dr => dr.task_instances.find(t => t.task_id === this.taskId)).filter(Boolean)
       }
     }),
+    taskId () { return (this.task || {}).task_id },
     run () { return this.value },
     executedTask () {
       if (!this.run) {
@@ -100,11 +124,32 @@ export default {
     ...mapMutations({
       deselectTask: 'tasks/deselectTask'
     }),
+    ...mapActions({
+      getTaskLog: 'tasks/getTaskLog'
+    }),
     round (number, dec = 1000) {
       return parseInt(number * dec) / dec
+    },
+    updateLog () {
+      if (this.taskId) {
+        this.getTaskLog({
+          taskId: this.taskId,
+          executionDate: this.executedTask.execution_date,
+          tryNumber: 1
+        })
+      }
     }
   },
-  mounted () {
+  watch: {
+    taskId () {
+      this.updateLog()
+    },
+    'task.log' () {
+      this.log = this.task.log
+    },
+    'executedTask.execution_date' () {
+      this.updateLog()
+    }
   }
 }
 </script>

@@ -35,9 +35,18 @@ export default {
     },
     async triggerDag ({ state }, configuration) {
       return await dagsAPI.triggerDag(state.selected.id, configuration)
+    },
+    toggleDag ({ state, commit }) {
+      return dagsAPI.setPausedDag(state.selected.id, !state.selected.is_paused).then(resp => {
+        console.log(resp)
+        commit('setPausedDag', resp.is_paused)
+      })
     }
   },
   mutations: {
+    setPausedDag (state, paused) {
+      state.selected.is_paused = paused
+    },
     setDags (state, dags) {
       // TODO Validation
       state.all = dags

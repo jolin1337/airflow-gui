@@ -60,7 +60,6 @@ export default async function (container, { dag, operators }) {
   //   plugins: [VueRenderPlugin] // render plugins
   // })
   editor.use(AreaPlugin)
-  editor.use(AutoArrangePlugin, { margin: { x: 25, y: 25 }, depth: 12, vertical: true }) // depth - max depth for arrange (0 - unlimited)
 
   var engine = new Rete.Engine('demo@0.1.0')
 
@@ -88,11 +87,12 @@ export default async function (container, { dag, operators }) {
   AreaPlugin.zoomAt(editor)
 
   const { nodes, rootNodes, maxConnections } = await setupTasks(editor, dag.tasks)
+  const vertical = maxConnections > 10
+  editor.use(AutoArrangePlugin, { margin: { x: 25, y: 25 }, depth: 12, vertical }) // depth - max depth for arrange (0 - unlimited)
   setTimeout(async () => {
     editor.trigger('process')
     Object.values(nodes).forEach(node => editor.view.updateConnections({ node }))
     rootNodes.forEach(node => {
-      const vertical = maxConnections > 10
       editor.trigger('arrange', { node: node, vertical })
     })
   }, 1000)

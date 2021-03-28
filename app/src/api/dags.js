@@ -74,5 +74,19 @@ export default {
   async triggerDag (dagId, conf) {
     const response = await axios.post(`/v1/dags/${dagId}/trigger`, { dag_id: dagId, conf })
     return response.data
+  },
+  async setPausedDag (dagId, paused) {
+    const data = {
+      query: `mutation MyMutation {
+        update_dag(where: {dag_id: {_eq: "airflow_monitoring"}}, _set: {is_paused: ${paused}}) {
+          returning {
+            dag_id
+            is_paused
+          }
+        }
+      }`
+    }
+    const response = await axios.post('/v1/graphql', data)
+    return response.data.data.update_dag.returning[0]
   }
 }

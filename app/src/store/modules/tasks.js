@@ -11,12 +11,25 @@ export default {
       tasksAPI.getTask(rootState.dags.selected.id, taskId).then((task) => {
         commit('selectTask', task)
       }).catch(e => commit('deselectTask'))
+    },
+    getTaskLog ({ commit, rootState }, { taskId, ...options }) {
+      tasksAPI.getTaskLog(rootState.dags.selected.id, taskId, options).then(log => {
+        commit('setTaskLog', log)
+      })
     }
   },
   mutations: {
+    setTaskLog (state, log) {
+      const selected = state.selected || {}
+      state.selected = {
+        ...selected,
+        log
+      }
+    },
     selectTask (state, task) {
       // TODO Validation
-      state.selected = task
+      const selected = state.selected || {}
+      state.selected = { ...selected, ...task }
     },
     deselectTask (state) {
       state.selected = null

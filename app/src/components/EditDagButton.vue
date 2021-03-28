@@ -32,7 +32,6 @@
         <v-text-field
           v-model="interval"
           style="margin-top: -16px"
-          color="secondary"
           label="Repeat interval"
           type="number"
           :value="1"
@@ -43,9 +42,9 @@
     Repeat on:
     <template v-if="['weeks'].includes(intervalType)">
       <h2 class="title mb-2">Day of Week</h2>
-      <v-chip-group multiple active-class="yellow--text darken-2" v-model="dow">
+      <v-chip-group multiple active-class="black--text darken-2" v-model="dow">
         <template v-for="tag in daysOfWeek">
-          <v-chip :key="tag" v-if="tag < weekDays.length">
+          <v-chip :key="tag" v-if="tag < weekDays.length" :color="cronColors[4]">
             {{ weekDays[tag] }}
           </v-chip>
         </template>
@@ -53,16 +52,16 @@
     </template>
     <template v-if="['months'].includes(intervalType)">
       <h2 class="title mb-2">Day of Month</h2>
-      <v-chip-group multiple active-class="yellow--text darken-2" v-model="dom">
-        <v-chip v-for="tag in daysOfMonth" :key="tag">
+      <v-chip-group multiple active-class="black--text darken-2" v-model="dom">
+        <v-chip v-for="tag in daysOfMonth" :key="tag" :color="cronColors[3]">
           {{ tag + 1 }}
         </v-chip>
       </v-chip-group>
     </template>
     <template v-if="['days', 'weeks', 'months'].includes(intervalType)">
       <h2 class="title mb-2">Hour of Day</h2>
-      <v-chip-group multiple active-class="yellow--text darken-2" v-model="hod">
-        <v-chip v-for="tag in hours" :key="tag">
+      <v-chip-group multiple active-class="black--text darken-2" v-model="hod">
+        <v-chip v-for="tag in hours" :key="tag" :color="cronColors[2]">
           {{ tag + 1 }}
         </v-chip>
       </v-chip-group>
@@ -71,9 +70,9 @@
       v-if="['hours', 'days', 'weeks', 'months'].includes(intervalType)"
     >
       <h2 class="title mb-2">Minute</h2>
-      <v-chip-group multiple active-class="yellow--text darken-2" v-model="moh">
+      <v-chip-group multiple active-class="black--text darken-2" v-model="moh">
         <template v-for="tag in this.minutes">
-          <v-chip :key="tag" v-if="(tag + 1) % 5 === 0">
+          <v-chip :key="tag" v-if="(tag + 1) % 5 === 0" :color="cronColors[1]">
             {{ tag + 1 }}
           </v-chip>
         </template>
@@ -81,7 +80,9 @@
     </template>
     <v-spacer vertical></v-spacer>
     <v-container>
-      Cron Expresson: <span class="highlight">{{ cron }}</span>
+      Cron Expresson:
+        <v-text-field v-model="schedule_interval" color="secondary"></v-text-field>
+      <span class="highlight" v-html="colorize(schedule_interval)"> </span>
     </v-container>
     <h1 class="title white--text mb-2">Commit message</h1>
     <v-checkbox
@@ -101,11 +102,11 @@
         color="secondary"
         text
         v-if="!dag.is_paused"
-        @click="toggleDagPaused()"
+        @click="toggleDag()"
       >
         Pause DAG
       </v-btn>
-      <v-btn color="secondary" text v-else @click="toggleDagPaused()">
+      <v-btn color="secondary" text v-else @click="toggleDag()">
         Resume DAG
       </v-btn>
       <v-btn color="secondary" text @click="confirmAction">
@@ -118,6 +119,7 @@
 <script>
 import DialogButton from '@/components/DialogButton'
 import cronParser from 'cron-parser'
+import { mapActions } from 'vuex'
 
 export default {
   components: {
@@ -181,8 +183,11 @@ export default {
     }
   },
   methods: {
+    ...mapActions({
+      toggleDag: 'dags/toggleDag'
+    }),
     validateSaveDag () {
-      this.dag.schedule_interval = `"${this.cron}"`
+      this.dag.schedule_interval = `"${this.schedule_interval}"`
       const msg = {
         dag: this.dag,
         commitMessage: this.commitMessage,
@@ -190,8 +195,9 @@ export default {
       }
       this.$emit('input', msg)
     },
-    toggleDagPaused () {
-      // TODO: Call to pause dag action in vuex
+    colorize (cron) {
+      const colors = this.cronColors
+      return cron.split(' ').map((v, i) => `<span class="${colors[Math.min(i, 5)]}" style="padding: 0 3px">${v}</span>`).join('')
     }
   },
   watch: {
@@ -202,6 +208,10 @@ export default {
       } else {
         return
       }
+      this.schedule_interval = cron
+    },
+    schedule_interval () {
+      const cron = this.schedule_interval
       const cronFields = cronParser.parseExpression(cron).fields
       this.moh = cronFields.minute.map(m => m === 0 ? 60 : parseInt(m / 5) - 1)
       this.hod = cronFields.hour.map(h => h === 0 ? 24 : h - 1)
@@ -231,7 +241,9 @@ export default {
       moh: [],
       hod: [],
       dow: [],
-      dom: []
+      dom: [],
+      cronColors: ['red', 'green', 'blue', 'pink', 'purple', 'grey'],
+      schedule_interval: '* * * * *'
     }
   },
   mounted () {
